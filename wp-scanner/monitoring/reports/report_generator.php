@@ -7,6 +7,8 @@
 
 namespace WPScanner\Monitoring\Reports;
 
+use WPScanner\Utils\Security;
+
 class ReportGenerator {
 
     private $output_dir;
@@ -182,13 +184,24 @@ class ReportGenerator {
     private function generateHTMLReport($report) {
         $summary = $report['summary'];
 
+        // Escape all output for XSS protection
+        $scan_id = Security::escapeHtml($report['scan_id']);
+        $timestamp = Security::escapeHtml($report['timestamp']);
+        $risk_level = Security::escapeHtml($summary['risk_level']);
+        $risk_score = (int)$summary['risk_score'];
+        $total_issues = (int)$summary['total_issues'];
+        $critical = (int)$summary['critical'];
+        $high = (int)$summary['high'];
+        $medium = (int)$summary['medium'];
+        $risk_class = $this->getRiskClass($summary['risk_level']);
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordPress Security Report - {$report['timestamp']}</title>
+    <title>WordPress Security Report - {$timestamp}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -281,34 +294,34 @@ class ReportGenerator {
 <body>
     <div class="header">
         <h1>WordPress Security Scan Report</h1>
-        <p>Scan ID: {$report['scan_id']}</p>
-        <p>Generated: {$report['timestamp']}</p>
+        <p>Scan ID: {$scan_id}</p>
+        <p>Generated: {$timestamp}</p>
     </div>
 
     <div class="summary">
         <div class="summary-card">
             <h3>Risk Level</h3>
-            <div class="value risk-{$this->getRiskClass($summary['risk_level'])}">{$summary['risk_level']}</div>
+            <div class="value risk-{$risk_class}">{$risk_level}</div>
         </div>
         <div class="summary-card">
             <h3>Risk Score</h3>
-            <div class="value">{$summary['risk_score']}/100</div>
+            <div class="value">{$risk_score}/100</div>
         </div>
         <div class="summary-card">
             <h3>Total Issues</h3>
-            <div class="value">{$summary['total_issues']}</div>
+            <div class="value">{$total_issues}</div>
         </div>
         <div class="summary-card">
             <h3>Critical</h3>
-            <div class="value risk-critical">{$summary['critical']}</div>
+            <div class="value risk-critical">{$critical}</div>
         </div>
         <div class="summary-card">
             <h3>High</h3>
-            <div class="value risk-high">{$summary['high']}</div>
+            <div class="value risk-high">{$high}</div>
         </div>
         <div class="summary-card">
             <h3>Medium</h3>
-            <div class="value risk-medium">{$summary['medium']}</div>
+            <div class="value risk-medium">{$medium}</div>
         </div>
     </div>
 
@@ -317,12 +330,17 @@ class ReportGenerator {
 HTML;
 
         foreach ($report['recommendations'] as $rec) {
-            $priority_class = strtolower($rec['priority']);
+            $priority_class = strtolower(Security::escapeAttr($rec['priority']));
+            $priority = Security::escapeHtml($rec['priority']);
+            $category = Security::escapeHtml($rec['category']);
+            $issue = Security::escapeHtml($rec['issue']);
+            $action = Security::escapeHtml($rec['action']);
+
             $html .= <<<HTML
         <div class="recommendation {$priority_class}">
-            <div><span class="badge badge-{$priority_class}">{$rec['priority']}</span> <strong>{$rec['category']}</strong></div>
-            <div style="margin-top: 10px;"><strong>Issue:</strong> {$rec['issue']}</div>
-            <div style="margin-top: 5px;"><strong>Action:</strong> {$rec['action']}</div>
+            <div><span class="badge badge-{$priority_class}">{$priority}</span> <strong>{$category}</strong></div>
+            <div style="margin-top: 10px;"><strong>Issue:</strong> {$issue}</div>
+            <div style="margin-top: 5px;"><strong>Action:</strong> {$action}</div>
         </div>
 HTML;
         }

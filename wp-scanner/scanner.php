@@ -420,6 +420,102 @@ try {
             }
             break;
 
+        case 'patterns':
+        case 'list-patterns':
+            CLI::header("Malware Pattern Management");
+
+            $pattern_updater = new WPScanner\Database\Patterns\PatternUpdater();
+            $stats = $pattern_updater->generateStatistics();
+
+            echo json_encode($stats, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            CLI::info("Total default patterns: " . $stats['pattern_summary']['total_default_patterns']);
+            CLI::info("Total custom patterns: " . $stats['pattern_summary']['total_custom_patterns']);
+            break;
+
+        case 'add-pattern':
+            CLI::header("Add Custom Pattern");
+
+            if (count($args) < 3) {
+                CLI::error("Usage: php scanner.php add-pattern <category> <pattern> <description> [severity]");
+                exit(1);
+            }
+
+            $pattern_updater = new WPScanner\Database\Patterns\PatternUpdater();
+            $category = $args[0];
+            $pattern = $args[1];
+            $description = $args[2];
+            $severity = $args[3] ?? 'HIGH';
+
+            try {
+                $result = $pattern_updater->addCustomPattern($category, $pattern, $description, $severity);
+                CLI::success("Custom pattern added to category: {$category}");
+                CLI::info("Total custom patterns: " . $result['total_custom_patterns']);
+            } catch (\Exception $e) {
+                CLI::error("Failed to add pattern: " . $e->getMessage());
+            }
+            break;
+
+        case 'test-pattern':
+            CLI::header("Test Pattern");
+
+            if (count($args) < 2) {
+                CLI::error("Usage: php scanner.php test-pattern <pattern> <sample_text>");
+                exit(1);
+            }
+
+            $pattern_updater = new WPScanner\Database\Patterns\PatternUpdater();
+            $pattern = $args[0];
+            $sample_text = $args[1];
+
+            try {
+                $result = $pattern_updater->testPattern($pattern, $sample_text);
+                echo json_encode($result, JSON_PRETTY_PRINT) . PHP_EOL;
+
+                if ($result['matched']) {
+                    CLI::success("Pattern matched!");
+                } else {
+                    CLI::info("Pattern did not match");
+                }
+            } catch (\Exception $e) {
+                CLI::error("Pattern test failed: " . $e->getMessage());
+            }
+            break;
+
+        case 'export-patterns':
+            CLI::header("Export Patterns");
+
+            $output_file = $args[0] ?? WP_SCANNER_DIR . '/data/patterns_backup_' . date('Y-m-d_His') . '.json';
+
+            $pattern_updater = new WPScanner\Database\Patterns\PatternUpdater();
+            $result = $pattern_updater->exportPatterns($output_file);
+
+            CLI::success("Patterns exported to: {$result['file']}");
+            CLI::info("File size: " . round($result['size'] / 1024, 2) . " KB");
+            break;
+
+        case 'import-patterns':
+            CLI::header("Import Patterns");
+
+            if (count($args) < 1) {
+                CLI::error("Usage: php scanner.php import-patterns <file> [merge]");
+                exit(1);
+            }
+
+            $input_file = $args[0];
+            $merge = ($args[1] ?? 'true') === 'true';
+
+            $pattern_updater = new WPScanner\Database\Patterns\PatternUpdater();
+            try {
+                $result = $pattern_updater->importPatterns($input_file, $merge);
+                CLI::success("Patterns imported successfully");
+                CLI::info("Imported patterns: " . $result['imported']);
+                CLI::info("Merge mode: " . ($result['merge_mode'] ? 'Yes' : 'No'));
+            } catch (\Exception $e) {
+                CLI::error("Import failed: " . $e->getMessage());
+            }
+            break;
+
         case 'version':
         case '-v':
         case '--version':
@@ -456,6 +552,11 @@ Commands:
   backup                   Create full backup (files + database)
   list-backups             List all backups
   test-email               Send test email notification
+  patterns, list-patterns  List all malware patterns (default + custom)
+  add-pattern              Add custom malware detection pattern
+  test-pattern             Test a pattern against sample text
+  export-patterns          Export patterns to JSON file (backup/sharing)
+  import-patterns          Import patterns from JSON file
   version, -v              Show version information
   help, -h                 Show this help message
 
@@ -467,6 +568,9 @@ Examples:
   php scanner.php check-vulnerabilities   # Check known vulns
   php scanner.php backup                  # Create full backup
   php scanner.php test-email              # Test email notifications
+  php scanner.php patterns                # List all patterns
+  php scanner.php add-pattern "backdoor" "/c99shell/i" "C99 Shell backdoor" "CRITICAL"
+  php scanner.php export-patterns         # Export patterns for backup
 
 Features:
   ✓ Database malware scanning
@@ -486,7 +590,13 @@ Features:
   ✓ File quarantine system
   ✓ Security hardening recommendations
   ✓ Automated backup system
-  ✓ Comprehensive reporting
+  ✓ Comprehensive reporting (JSON + HTML)
+  ✓ Updateable malware pattern system
+  ✓ Custom pattern management
+  ✓ Pattern import/export
+  ✓ Automated remediation engine
+  ✓ Email/Slack/webhook notifications
+  ✓ Cron job scheduling
 
 For more information, see README.md
 

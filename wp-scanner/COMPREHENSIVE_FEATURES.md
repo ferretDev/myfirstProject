@@ -540,9 +540,62 @@ php scanner.php init
 
 ---
 
+## 🔐 Security Enhancements (v2.0.1)
+
+### XSS Protection in Reports
+All HTML reports now include comprehensive XSS protection:
+- **Output Escaping**: All dynamic content escaped using Security::escapeHtml()
+- **Attribute Safety**: Attributes escaped with Security::escapeAttr()
+- **Safe Rendering**: User-supplied content sanitized before display
+
+### Malware Pattern Management
+Complete pattern management system for malware detection:
+
+**Commands**:
+```bash
+php scanner.php patterns                # List all patterns
+php scanner.php add-pattern             # Add custom pattern
+php scanner.php test-pattern            # Test pattern safely
+php scanner.php export-patterns         # Export for backup
+php scanner.php import-patterns         # Import from file
+```
+
+**Features**:
+- ✅ **Custom Patterns**: Add organization-specific detection patterns
+- ✅ **Pattern Testing**: Safely test patterns before deployment
+- ✅ **Import/Export**: Share patterns across teams
+- ✅ **Version Control**: Track pattern changes over time
+- ✅ **ReDoS Protection**: Automatic validation prevents dangerous regex
+- ✅ **Categories**: Organize patterns by threat type
+
+**Use Cases**:
+1. **Detect specific backdoors** found in your environment
+2. **Share threat intelligence** across multiple WordPress installations
+3. **Customize detection** for your unique threat landscape
+4. **Version control patterns** in your security repository
+
+**Example**:
+```bash
+# Add pattern for custom backdoor
+php scanner.php add-pattern "backdoor" "/customBackdoor_v2/i" "Custom backdoor found in pirated plugins" "CRITICAL"
+
+# Test the pattern
+php scanner.php test-pattern "/customBackdoor_v2/i" "<?php customBackdoor_v2(); ?>"
+
+# Export for team
+php scanner.php export-patterns /tmp/company_patterns.json
+
+# Import on other servers
+php scanner.php import-patterns /tmp/company_patterns.json
+```
+
+For complete documentation, see `PATTERN_MANAGEMENT.md`
+
+---
+
 ## 🎉 Summary
 
-WordPress Security Scanner v2.0 provides:
+WordPress Security Scanner v2.0.1 provides:
 
 ✅ **Complete Coverage**:
 - WordPress Core
@@ -560,15 +613,24 @@ WordPress Security Scanner v2.0 provides:
 
 ✅ **Enterprise Features**:
 - Risk scoring
-- Comprehensive reports
+- Comprehensive reports (JSON + HTML)
 - Backup integration
 - Detailed logging
+- XSS-protected reports
+- Custom pattern management
 
 ✅ **Production Ready**:
 - Input validation
 - Path protection
 - Rate limiting
 - Confirmation prompts
+- Output escaping
 - Extensive testing
 
-**This is now a fully-featured, production-ready WordPress security solution!**
+✅ **Customizable**:
+- Custom malware patterns
+- Pattern import/export
+- Team collaboration
+- Version controlled patterns
+
+**This is now a fully-featured, production-ready, enterprise-grade WordPress security solution!**

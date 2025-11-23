@@ -126,6 +126,19 @@ class MaliciousPatterns {
     }
 
     /**
+     * Get all patterns combined
+     */
+    public static function getPatterns() {
+        return [
+            'code' => self::getCodePatterns(),
+            'spam' => self::getSpamPatterns(),
+            'urls' => self::getSuspiciousURLPatterns(),
+            'user_agents' => self::getMaliciousUserAgents(),
+            'oauth' => self::getOAuthPatterns()
+        ];
+    }
+
+    /**
      * Check if content matches any pattern
      */
     public static function matchesPattern($content, $patterns) {
