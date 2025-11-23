@@ -302,10 +302,75 @@ try {
             }
             break;
 
+        case 'check-plugins':
+            CLI::header("Plugin Integrity Check");
+
+            $plugin_checker = new WPScanner\Core\PluginIntegrityChecker($config['wp_root']);
+            $report = $plugin_checker->generateReport();
+
+            echo json_encode($report, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            if ($report['summary']['total_issues'] > 0) {
+                CLI::warning($report['summary']['total_issues'] . " plugin integrity issues found!");
+            } else {
+                CLI::success("All plugins verified successfully");
+            }
+            break;
+
+        case 'check-themes':
+            CLI::header("Theme Integrity Check");
+
+            $theme_checker = new WPScanner\Core\ThemeIntegrityChecker($config['wp_root']);
+            $report = $theme_checker->generateReport();
+
+            echo json_encode($report, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            if ($report['summary']['total_issues'] > 0) {
+                CLI::warning($report['summary']['total_issues'] . " theme integrity issues found!");
+            } else {
+                CLI::success("All themes verified successfully");
+            }
+            break;
+
+        case 'create-plugin-baselines':
+            CLI::header("Create Plugin Baselines");
+
+            $plugin_checker = new WPScanner\Core\PluginIntegrityChecker($config['wp_root']);
+            $result = $plugin_checker->createAllCustomBaselines();
+
+            CLI::success("Created " . $result['total'] . " plugin baselines");
+            break;
+
+        case 'create-theme-baselines':
+            CLI::header("Create Theme Baselines");
+
+            $theme_checker = new WPScanner\Core\ThemeIntegrityChecker($config['wp_root']);
+            $result = $theme_checker->createAllBaselines();
+
+            CLI::success("Created " . $result['total'] . " theme baselines");
+            break;
+
+        case 'check-vulnerabilities':
+        case 'vulns':
+            CLI::header("Vulnerability Check");
+
+            $vuln_checker = new WPScanner\Core\VulnerabilityChecker();
+            $report = $vuln_checker->generateReport();
+
+            echo json_encode($report, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            if ($report['summary']['total_vulnerabilities'] > 0) {
+                CLI::warning($report['summary']['total_vulnerabilities'] . " known vulnerabilities found!");
+                CLI::info("Update vulnerable plugins/themes immediately");
+            } else {
+                CLI::success("No known vulnerabilities detected");
+            }
+            break;
+
         case 'version':
         case '-v':
         case '--version':
-            CLI::println("WordPress Security Scanner v1.0.0", CLI::CYAN);
+            CLI::println("WordPress Security Scanner v2.0.0", CLI::CYAN);
             break;
 
         case 'help':
@@ -318,34 +383,47 @@ try {
 Usage: php scanner.php [command] [options]
 
 Commands:
-  scan, full          Run comprehensive security scan
-  quick               Run quick security scan (essential checks only)
-  init, baseline      Initialize security baselines
-  watch               Check for file system changes
-  users               Audit user accounts and roles
-  permissions         Audit file permissions
-  htaccess            Scan .htaccess files
-  anomalies           Run anomaly detection
-  integrity           Check WordPress core file integrity
-  harden              Audit security hardening
-  apply-hardening     Apply security hardening fixes
-  backup              Create full backup (files + database)
-  list-backups        List all backups
-  version, -v         Show version information
-  help, -h            Show this help message
+  scan, full               Run comprehensive security scan
+  quick                    Run quick security scan (essential checks only)
+  init, baseline           Initialize security baselines
+  watch                    Check for file system changes
+  users                    Audit user accounts and roles
+  permissions              Audit file permissions
+  htaccess                 Scan .htaccess files
+  anomalies                Run anomaly detection
+  integrity                Check WordPress core file integrity
+  check-plugins            Verify plugin file integrity (repo + custom)
+  check-themes             Verify theme file integrity
+  create-plugin-baselines  Create baselines for custom/premium plugins
+  create-theme-baselines   Create baselines for all themes
+  check-vulnerabilities    Check for known vulnerabilities in WP/plugins/themes
+  harden                   Audit security hardening
+  apply-hardening          Apply security hardening fixes
+  backup                   Create full backup (files + database)
+  list-backups             List all backups
+  version, -v              Show version information
+  help, -h                 Show this help message
 
 Examples:
-  php scanner.php scan              # Run full scan
-  php scanner.php quick             # Quick scan
-  php scanner.php init              # Initialize baselines
-  php scanner.php integrity         # Check WP core integrity
-  php scanner.php harden            # Audit hardening
-  php scanner.php backup            # Create backup
+  php scanner.php scan                    # Run full scan
+  php scanner.php quick                   # Quick scan
+  php scanner.php init                    # Initialize baselines
+  php scanner.php integrity               # Check WP core integrity
+  php scanner.php check-plugins           # Check plugin file integrity
+  php scanner.php check-themes            # Check theme file integrity
+  php scanner.php create-plugin-baselines # Create plugin baselines
+  php scanner.php check-vulnerabilities   # Check known vulnerabilities
+  php scanner.php harden                  # Audit hardening
+  php scanner.php backup                  # Create backup
 
 Features:
   ✓ Database malware scanning
   ✓ File system integrity checking
   ✓ WordPress core integrity verification
+  ✓ Plugin integrity verification (repo & custom)
+  ✓ Theme integrity verification
+  ✓ Known vulnerability detection (WPScan API)
+  ✓ Custom plugin/theme baseline system
   ✓ Permission auditing
   ✓ .htaccess security scanning
   ✓ User role monitoring
