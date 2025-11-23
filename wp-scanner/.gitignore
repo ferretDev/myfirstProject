@@ -1,0 +1,57 @@
+# WordPress Scanner - .gitignore
+
+# Logs
+logs/*.log
+*.log
+
+# Reports
+reports/*.html
+reports/*.json
+
+# Quarantine
+quarantine/*
+!quarantine/.gitkeep
+
+# Data and baselines
+data/*.json
+data/*.txt
+!data/.gitkeep
+
+# Configuration (sensitive)
+config/local.php
+config/production.php
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# Composer
+vendor/
+composer.lock
+
+# Node modules (if using npm)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+
+# Backup files
+*.bak
+*.backup
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
