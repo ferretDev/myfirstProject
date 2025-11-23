@@ -116,14 +116,29 @@ try {
     switch ($command) {
         case 'scan':
         case 'full':
-            CLI::header("WordPress Security Scanner - Full Scan");
-            $scanner = new WPScanner\Core\Scanner($config);
-            $results = $scanner->runFullScan();
+            // Use new comprehensive scan orchestrator
+            $comprehensive_scan = new WPScanner\Core\ComprehensiveScan($config, $GLOBALS['wpdb'] ?? null);
+            $results = $comprehensive_scan->execute();
 
-            if (isset($results['report'])) {
-                CLI::success("Scan completed successfully!");
-                CLI::info("Scan ID: " . $results['scan_id']);
-                CLI::info("Report: " . $results['report']['html_report']);
+            // Save results
+            $results_file = $comprehensive_scan->saveResults();
+
+            // Generate enhanced report
+            require_once WP_SCANNER_DIR . '/monitoring/reports/report_generator.php';
+            $report_gen = new WPScanner\Monitoring\Reports\ReportGenerator();
+            $report = $report_gen->generateSecurityReport($results);
+
+            CLI::success("Comprehensive scan completed!");
+            CLI::info("Scan ID: " . $results['scan_id']);
+            CLI::info("Risk Level: " . $results['summary']['risk_level']);
+            CLI::info("Total Issues: " . $results['summary']['total_issues']);
+            CLI::info("HTML Report: " . $report['html_report']);
+
+            // Send notifications if enabled
+            if ($config['alerts']['email'] ?? false) {
+                $notifier = new WPScanner\Utils\Notifier($config);
+                $notifier->sendScanNotification($results);
+                CLI::info("Email notification sent");
             }
             break;
 
@@ -367,6 +382,44 @@ try {
             }
             break;
 
+        case 'auto-fix':
+        case 'remediate':
+            CLI::header("Automated Remediation");
+
+            // First, load latest scan results
+            $latest_scan = WP_SCANNER_DIR . '/data/latest_comprehensive_scan.json';
+
+            if (!file_exists($latest_scan)) {
+                CLI::error("No scan results found. Run 'php scanner.php scan' first.");
+                exit(1);
+            }
+
+            $scan_results = json_decode(file_get_contents($latest_scan), true);
+
+            $remediation = new WPScanner\Core\AutoRemediation($config['wp_root'], false);
+            $result = $remediation->remediate($scan_results, false);
+
+            if (isset($result['fixes_applied']) && $result['fixes_applied'] > 0) {
+                CLI::success($result['fixes_applied'] . " issues fixed automatically");
+                CLI::info("Run another scan to verify fixes");
+            } else {
+                CLI::info("No fixes applied");
+            }
+            break;
+
+        case 'test-email':
+            CLI::header("Test Email Notification");
+
+            $notifier = new WPScanner\Utils\Notifier($config);
+            $result = $notifier->sendTest();
+
+            if ($result['email']['sent'] ?? false) {
+                CLI::success("Test email sent successfully");
+            } else {
+                CLI::error("Failed to send test email");
+            }
+            break;
+
         case 'version':
         case '-v':
         case '--version':
@@ -383,7 +436,7 @@ try {
 Usage: php scanner.php [command] [options]
 
 Commands:
-  scan, full               Run comprehensive security scan
+  scan, full               Run comprehensive security scan (orchestrated, all modules)
   quick                    Run quick security scan (essential checks only)
   init, baseline           Initialize security baselines
   watch                    Check for file system changes
@@ -399,22 +452,21 @@ Commands:
   check-vulnerabilities    Check for known vulnerabilities in WP/plugins/themes
   harden                   Audit security hardening
   apply-hardening          Apply security hardening fixes
+  auto-fix, remediate      Automatically fix common security issues
   backup                   Create full backup (files + database)
   list-backups             List all backups
+  test-email               Send test email notification
   version, -v              Show version information
   help, -h                 Show this help message
 
 Examples:
-  php scanner.php scan                    # Run full scan
-  php scanner.php quick                   # Quick scan
+  php scanner.php scan                    # Run comprehensive scan (all modules)
+  php scanner.php auto-fix                # Auto-fix issues from last scan
   php scanner.php init                    # Initialize baselines
-  php scanner.php integrity               # Check WP core integrity
-  php scanner.php check-plugins           # Check plugin file integrity
-  php scanner.php check-themes            # Check theme file integrity
-  php scanner.php create-plugin-baselines # Create plugin baselines
-  php scanner.php check-vulnerabilities   # Check known vulnerabilities
-  php scanner.php harden                  # Audit hardening
-  php scanner.php backup                  # Create backup
+  php scanner.php check-plugins           # Check plugin integrity
+  php scanner.php check-vulnerabilities   # Check known vulns
+  php scanner.php backup                  # Create full backup
+  php scanner.php test-email              # Test email notifications
 
 Features:
   ✓ Database malware scanning
