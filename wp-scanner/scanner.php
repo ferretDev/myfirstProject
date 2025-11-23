@@ -97,9 +97,20 @@ class CLI {
     }
 }
 
+// Initialize security
+WPScanner\Utils\Security::init($config['wp_root']);
+
 // Parse command line arguments
-$command = $argv[1] ?? 'help';
+$command = isset($argv[1]) ? WPScanner\Utils\Security::sanitizeCommandArg($argv[1]) : 'help';
 $args = array_slice($argv, 2);
+
+// Rate limiting (max 10 scans per hour)
+try {
+    WPScanner\Utils\Security::checkRateLimit('scanner_' . $command, 10, 3600);
+} catch (\Exception $e) {
+    CLI::error($e->getMessage());
+    exit(1);
+}
 
 try {
     switch ($command) {
@@ -217,6 +228,80 @@ try {
             echo json_encode($results, JSON_PRETTY_PRINT) . PHP_EOL;
             break;
 
+        case 'integrity':
+            CLI::header("WordPress Core Integrity Check");
+
+            $checker = new WPScanner\Core\IntegrityChecker($config['wp_root']);
+            $report = $checker->generateReport();
+
+            echo json_encode($report, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            if ($report['summary']['total_issues'] > 0) {
+                CLI::warning($report['summary']['total_issues'] . " core integrity issues found!");
+            } else {
+                CLI::success("WordPress core files verified successfully");
+            }
+            break;
+
+        case 'harden':
+            CLI::header("Security Hardening");
+
+            $hardening = new WPScanner\Core\SecurityHardening($config['wp_root']);
+            $report = $hardening->generateReport();
+
+            echo json_encode($report, JSON_PRETTY_PRINT) . PHP_EOL;
+
+            if ($report['summary']['total_issues'] > 0) {
+                CLI::warning($report['summary']['total_issues'] . " security issues found!");
+                CLI::info("Run 'php scanner.php apply-hardening' to fix issues");
+            } else {
+                CLI::success("Site is properly hardened");
+            }
+            break;
+
+        case 'apply-hardening':
+            CLI::header("Apply Security Hardening");
+
+            $hardening = new WPScanner\Core\SecurityHardening($config['wp_root']);
+
+            echo "Creating index.php files in sensitive directories...\n";
+            $result = $hardening->createIndexFiles(false);
+
+            if (isset($result['created'])) {
+                CLI::success("Created " . count($result['created']) . " index.php files");
+            }
+
+            echo "\nRecommended .htaccess rules:\n";
+            echo $hardening->generateHtaccessRules();
+            break;
+
+        case 'backup':
+            CLI::header("Create Backup");
+
+            $backup = new WPScanner\Utils\Backup($config['wp_root']);
+            $result = $backup->fullBackup(false);
+
+            if (isset($result['success'])) {
+                CLI::success("Backup created successfully");
+                echo json_encode($result, JSON_PRETTY_PRINT) . PHP_EOL;
+            }
+            break;
+
+        case 'list-backups':
+            CLI::header("List Backups");
+
+            $backup = new WPScanner\Utils\Backup($config['wp_root']);
+            $backups = $backup->listBackups();
+
+            if (empty($backups)) {
+                CLI::info("No backups found");
+            } else {
+                echo json_encode($backups, JSON_PRETTY_PRINT) . PHP_EOL;
+                $size = $backup->getTotalBackupSize();
+                CLI::info("Total backup size: " . $size['human']);
+            }
+            break;
+
         case 'version':
         case '-v':
         case '--version':
@@ -241,6 +326,11 @@ Commands:
   permissions         Audit file permissions
   htaccess            Scan .htaccess files
   anomalies           Run anomaly detection
+  integrity           Check WordPress core file integrity
+  harden              Audit security hardening
+  apply-hardening     Apply security hardening fixes
+  backup              Create full backup (files + database)
+  list-backups        List all backups
   version, -v         Show version information
   help, -h            Show this help message
 
@@ -248,11 +338,14 @@ Examples:
   php scanner.php scan              # Run full scan
   php scanner.php quick             # Quick scan
   php scanner.php init              # Initialize baselines
-  php scanner.php users             # Audit users
+  php scanner.php integrity         # Check WP core integrity
+  php scanner.php harden            # Audit hardening
+  php scanner.php backup            # Create backup
 
 Features:
   ✓ Database malware scanning
   ✓ File system integrity checking
+  ✓ WordPress core integrity verification
   ✓ Permission auditing
   ✓ .htaccess security scanning
   ✓ User role monitoring
@@ -261,6 +354,8 @@ Features:
   ✓ OAuth/credential exposure detection
   ✓ robots.txt change monitoring
   ✓ File quarantine system
+  ✓ Security hardening recommendations
+  ✓ Automated backup system
   ✓ Comprehensive reporting
 
 For more information, see README.md

@@ -1,0 +1,4 @@
+# Deny all access to backups directory
+# CRITICAL: Backups contain sensitive data
+Order Deny,Allow
+Deny from all

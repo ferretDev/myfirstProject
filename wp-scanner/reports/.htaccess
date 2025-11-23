@@ -1,0 +1,6 @@
+# Deny all access to reports directory
+Order Deny,Allow
+Deny from all
+
+# Allow only from localhost (adjust as needed)
+# Allow from 127.0.0.1
