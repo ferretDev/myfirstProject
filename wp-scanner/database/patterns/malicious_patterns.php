@@ -9,11 +9,23 @@ namespace WPScanner\Database\Patterns;
 
 class MaliciousPatterns {
 
+    // Pattern cache to avoid recreating arrays
+    private static $code_patterns_cache = null;
+    private static $spam_patterns_cache = null;
+    private static $url_patterns_cache = null;
+    private static $agent_patterns_cache = null;
+    private static $oauth_patterns_cache = null;
+    private static $all_patterns_cache = null;
+
     /**
-     * Get all malicious code patterns
+     * Get all malicious code patterns (cached)
      */
     public static function getCodePatterns() {
-        return [
+        if (self::$code_patterns_cache !== null) {
+            return self::$code_patterns_cache;
+        }
+
+        self::$code_patterns_cache = [
             'obfuscation' => [
                 'base64' => '/eval\s*\(\s*base64_decode\s*\(/i',
                 'gzinflate' => '/gzinflate\s*\(\s*base64_decode/i',
@@ -51,13 +63,19 @@ class MaliciousPatterns {
                 'concat_sql' => '/CONCAT\s*\(/i'
             ]
         ];
+
+        return self::$code_patterns_cache;
     }
 
     /**
-     * Get spam content patterns
+     * Get spam content patterns (cached)
      */
     public static function getSpamPatterns() {
-        return [
+        if (self::$spam_patterns_cache !== null) {
+            return self::$spam_patterns_cache;
+        }
+
+        self::$spam_patterns_cache = [
             'pharmaceutical' => [
                 '/viagra|cialis|levitra|kamagra/i',
                 '/pharmacy|pills|medication/i',
@@ -82,36 +100,54 @@ class MaliciousPatterns {
                 '/<iframe[^>]*style="display:none/i'
             ]
         ];
+
+        return self::$spam_patterns_cache;
     }
 
     /**
-     * Get suspicious URL patterns
+     * Get suspicious URL patterns (cached)
      */
     public static function getSuspiciousURLPatterns() {
-        return [
+        if (self::$url_patterns_cache !== null) {
+            return self::$url_patterns_cache;
+        }
+
+        self::$url_patterns_cache = [
             '/bit\.ly|goo\.gl|tinyurl\.com/i',
             '/\.ru\/|\.cn\/|\.tk\//i',
             '/redirect\.php|go\.php|out\.php/i',
             '/\?goto=|r=http|url=http/i'
         ];
+
+        return self::$url_patterns_cache;
     }
 
     /**
-     * Get malicious user agent patterns
+     * Get malicious user agent patterns (cached)
      */
     public static function getMaliciousUserAgents() {
-        return [
+        if (self::$agent_patterns_cache !== null) {
+            return self::$agent_patterns_cache;
+        }
+
+        self::$agent_patterns_cache = [
             '/sqlmap|havij|acunetix/i',
             '/nikto|nessus|openvas/i',
             '/masscan|nmap/i'
         ];
+
+        return self::$agent_patterns_cache;
     }
 
     /**
-     * OAuth and JSON suspicious patterns
+     * OAuth and JSON suspicious patterns (cached)
      */
     public static function getOAuthPatterns() {
-        return [
+        if (self::$oauth_patterns_cache !== null) {
+            return self::$oauth_patterns_cache;
+        }
+
+        self::$oauth_patterns_cache = [
             'credentials' => [
                 '/"client_secret"\s*:\s*"[^"]+"/i',
                 '/"access_token"\s*:\s*"[^"]+"/i',
@@ -123,19 +159,41 @@ class MaliciousPatterns {
                 '/secret_key|secretkey|secret-key/i'
             ]
         ];
+
+        return self::$oauth_patterns_cache;
     }
 
     /**
-     * Get all patterns combined
+     * Get all patterns combined (cached)
+     * This is the main method for loading all patterns efficiently
      */
     public static function getPatterns() {
-        return [
+        if (self::$all_patterns_cache !== null) {
+            return self::$all_patterns_cache;
+        }
+
+        self::$all_patterns_cache = [
             'code' => self::getCodePatterns(),
             'spam' => self::getSpamPatterns(),
             'urls' => self::getSuspiciousURLPatterns(),
             'user_agents' => self::getMaliciousUserAgents(),
             'oauth' => self::getOAuthPatterns()
         ];
+
+        return self::$all_patterns_cache;
+    }
+
+    /**
+     * Clear all pattern caches
+     * Call this when patterns are updated externally
+     */
+    public static function clearCache() {
+        self::$code_patterns_cache = null;
+        self::$spam_patterns_cache = null;
+        self::$url_patterns_cache = null;
+        self::$agent_patterns_cache = null;
+        self::$oauth_patterns_cache = null;
+        self::$all_patterns_cache = null;
     }
 
     /**

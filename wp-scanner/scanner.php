@@ -516,10 +516,44 @@ try {
             }
             break;
 
+        case 'memory':
+        case 'memory-stats':
+            CLI::header("Memory Statistics");
+
+            $optimizer = WPScanner\Utils\MemoryOptimizer::getInstance();
+            $stats = $optimizer->getMemoryStats();
+
+            CLI::info("Current Usage: " . WPScanner\Utils\MemoryOptimizer::formatBytes($stats['current_usage']) .
+                     " ({$stats['current_usage_mb']}MB)");
+            CLI::info("Peak Usage: " . WPScanner\Utils\MemoryOptimizer::formatBytes($stats['peak_usage']) .
+                     " ({$stats['peak_usage_mb']}MB)");
+            CLI::info("Memory Limit: " . ($stats['limit_mb'] === 'unlimited' ? 'Unlimited' : $stats['limit_mb'] . 'MB'));
+
+            if ($stats['limit_mb'] !== 'unlimited') {
+                CLI::info("Memory Used: {$stats['percentage_used']}%");
+                CLI::info("Available: " . WPScanner\Utils\MemoryOptimizer::formatBytes($stats['available']) .
+                         " ({$stats['available_mb']}MB)");
+
+                if ($stats['percentage_used'] > 80) {
+                    CLI::warning("Memory usage above 80% - consider increasing PHP memory_limit");
+                } elseif ($stats['percentage_used'] > 50) {
+                    CLI::info("Memory usage healthy");
+                } else {
+                    CLI::success("Plenty of memory available");
+                }
+            } else {
+                CLI::success("Memory limit is unlimited");
+            }
+
+            // Pattern cache status
+            $patterns_loaded = (WPScanner\Utils\MemoryOptimizer::getCachedPatterns() !== null);
+            CLI::info("Pattern Cache: " . ($patterns_loaded ? "Loaded" : "Not loaded"));
+            break;
+
         case 'version':
         case '-v':
         case '--version':
-            CLI::println("WordPress Security Scanner v2.0.0", CLI::CYAN);
+            CLI::println("WordPress Security Scanner v2.0.1", CLI::CYAN);
             break;
 
         case 'help':
@@ -557,6 +591,7 @@ Commands:
   test-pattern             Test a pattern against sample text
   export-patterns          Export patterns to JSON file (backup/sharing)
   import-patterns          Import patterns from JSON file
+  memory, memory-stats     Show memory usage statistics
   version, -v              Show version information
   help, -h                 Show this help message
 
