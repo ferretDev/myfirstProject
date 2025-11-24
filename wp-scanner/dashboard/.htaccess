@@ -1,0 +1,43 @@
+# WordPress Security Scanner Dashboard - Access Control
+
+# Allow access to PHP files
+<Files "*.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Protect sensitive files
+<FilesMatch "\.(log|json|bak|sql)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Enable directory indexes (optional)
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable file execution in uploads (if using file uploads)
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|sh|cgi)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Allow only index.php
+<FilesMatch "^(index)\.php$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Force HTTPS (uncomment in production)
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} !=on
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+# </IfModule>

@@ -84,6 +84,19 @@ return [
         'output_dir' => WP_SCANNER_DIR . '/reports',
         'format' => ['json', 'html'],
         'retention_days' => 30,  // Keep reports for N days
+        'interactive' => true,  // Generate interactive HTML reports
+        'enable_actions' => true,  // Enable action buttons in reports
+        'enable_export' => true,  // Enable export options (PDF, CSV, email)
+    ],
+
+    // Dashboard settings
+    'dashboard' => [
+        'enabled' => true,
+        'password' => 'changeme',  // CHANGE THIS IN PRODUCTION!
+        'session_timeout' => 3600,  // 1 hour in seconds
+        'auto_refresh' => 60,  // Auto-refresh interval in seconds
+        'enable_ip_whitelist' => false,
+        'allowed_ips' => [],  // ['192.168.1.0/24', '10.0.0.1']
     ],
 
     // Data directory
